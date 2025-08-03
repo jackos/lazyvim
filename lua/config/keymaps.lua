@@ -1,42 +1,118 @@
--- Keymaps are automatically loaded on the VeryLazy event
--- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
--- Add any additional keymaps here
+-- Defaults: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
 local map = vim.keymap.set
+local all_modes = { "n", "t", "v", "i" }
+local sn = { silent = true, noremap = true }
 
--- Focus split navigation with Alt + h/j/k/l
-map("n", "<A-h>", "<C-w>h", { desc = "Focus left split" })
-map("n", "<A-j>", "<C-w>j", { desc = "Focus split below" })
-map("n", "<A-k>", "<C-w>k", { desc = "Focus split above" })
-map("n", "<A-l>", "<C-w>l", { desc = "Focus right split" })
+local keybindings_all_modes = {
+  { "<A-h>", "<C-w>h", "Focus window left" },
+  { "<A-j>", "<C-w>j", "Focus window below" },
+  { "<A-k>", "<C-w>k", "Focus window above" },
+  { "<A-l>", "<C-w>l", "Focus window right" },
+  { "<A-w>", ":q<CR>", "Close window" },
+  { "<A-S-l>", ":vsplit<CR>", "Split window right" },
+  { "<A-S-j>", ":split<CR>", "Split window below" },
+  { "<A-f>", "<leader>wm", "Maximize window toggle" },
+  { "<C-h>", ":bprevious<CR>", "Previous Buffer" },
+  { "<C-l>", ":bnext<CR>", "Next buffer" },
+}
 
--- Buffer navigation with Ctrl + h/l
-map("n", "<C-h>", ":bprevious<CR>", { desc = "Previous buffer" })
-map("n", "<C-l>", ":bnext<CR>", { desc = "Next buffer" })
-
-map({ "t", "n" }, "<A-t>", function()
-  Snacks.terminal()
-end, { desc = "Terminal (cwd)" })
-
--- Function to create a menu for editing config files
-local function open_config_menu()
-  local configs = {
-    { path = "~/.config/nvim/lua/config/keymaps.lua", name = "Neovim Keymaps" },
-    { path = "~/.config/fish/config.fish", name = "Fish Config" },
-    { path = "~/.config/ghostty/config", name = "Ghostty Config" },
-  }
-
-  -- Use vim.ui.select to create an interactive menu
-  vim.ui.select(configs, {
-    prompt = "Select config file to edit:",
-    format_item = function(item)
-      return item.name
-    end,
-  }, function(choice)
-    if choice then
-      vim.cmd("edit " .. vim.fn.expand(choice.path))
-    end
-  end)
+for _, binding in ipairs(keybindings_all_modes) do
+  map(all_modes, binding[1], binding[2], { desc = binding[3], unpack(sn) })
 end
 
--- Set <leader>h to open the config menu
-map("n", "<leader>h", open_config_menu, { desc = "Open config file menu" })
+map("n", "<S-u>", "<C-r>", { desc = "Redo", unpack(sn) })
+
+-- snacks
+Snacks.toggle.zoom():map("<A-f>")
+map("t", "<A-f>", "<C-\\><C-n>", { desc = "Exit terminal to normal mode", unpack(sn) })
+
+map(all_modes, "<A-t>", function()
+  Snacks.terminal()
+end, { desc = "Toggle Terminal" })
+
+map(all_modes, "<C-w>", function()
+  Snacks.bufdelete()
+end, { desc = "Delete Buffer" })
+
+-- which-key
+local wk = require("which-key")
+
+wk.add({
+  { "<leader>m", group = "Modify Config Files" }, -- Group for config files
+  { "<leader>mm", ":edit ~/.config/nvim/lua/config/keymaps.lua<CR>", desc = "Neovim Keymaps" },
+  { "<leader>mf", ":edit ~/.config/fish/config.fish<CR>", desc = "Fish" },
+  { "<leader>ma", ":edit ~/.config/alacritty/alacritty.toml<CR>", desc = "Alacritty" },
+  { "<leader>ml", ":edit ~/.config/lazygit/config.yml<CR>", desc = "Lazygit" },
+  { "<leader>mg", ":edit ~/.gitconfig<CR>", desc = "Git" },
+  {
+    "<leader>mn",
+    function()
+      require("snacks").picker.files({ cwd = vim.fn.stdpath("config") })
+    end,
+    desc = "Neovim",
+  },
+}, { mode = "n" })
+
+local mc = require("multicursor-nvim")
+
+-- Add or skip cursor above/below the main cursor.
+map({ "n", "x" }, "<up>", function()
+  mc.lineAddCursor(-1)
+end, { desc = "Add cursor above" })
+
+map({ "n", "x" }, "<down>", function()
+  mc.lineAddCursor(1)
+end, { desc = "Add cursor below" })
+
+map({ "n", "x" }, "<leader><C-k>", function()
+  mc.lineSkipCursor(-1)
+end)
+
+map({ "n", "x" }, "<leader><C-j>", function()
+  mc.lineSkipCursor(1)
+end)
+
+-- Add or skip adding a new cursor by matching word/selection
+map({ "n", "x" }, "<A-n>", function()
+  mc.matchAddCursor(1)
+end, { desc = "Add cursor matching word next" })
+
+map({ "n", "x" }, "<A-b>", function()
+  mc.matchAddCursor(-1)
+end, { desc = "Add cursor matching word back" })
+
+map({ "n", "x" }, "<leader>C-m", function()
+  mc.matchSkipCursor(1)
+end)
+
+map({ "n", "x" }, "<leader>C-n", function()
+  mc.matchSkipCursor(-1)
+end)
+
+-- Add and remove cursors with control + left click.
+map("n", "<c-leftmouse>", mc.handleMouse)
+map("n", "<c-leftdrag>", mc.handleMouseDrag)
+map("n", "<c-leftrelease>", mc.handleMouseRelease)
+
+-- Disable and enable cursors.
+map({ "n", "x" }, "<Esc>", mc.toggleCursor)
+
+-- Mappings defined in a keymap layer only apply when there are
+-- multiple cursors. This lets you have overlapping mappings.
+mc.addKeymapLayer(function(layerSet)
+  -- Select a different cursor as the main one.
+  layerSet({ "n", "x" }, "<left>", mc.prevCursor)
+  layerSet({ "n", "x" }, "<right>", mc.nextCursor)
+
+  -- Delete the main cursor.
+  layerSet({ "n", "x" }, "<leader>x", mc.deleteCursor)
+
+  -- Enable and clear cursors using escape.
+  layerSet("n", "<esc>", function()
+    if not mc.cursorsEnabled() then
+      mc.enableCursors()
+    else
+      mc.clearCursors()
+    end
+  end)
+end)
