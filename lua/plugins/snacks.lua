@@ -80,13 +80,4 @@ return {
     return opts
   end,
 
-  keys = {
-    {
-      "<leader>gF",
-      function()
-        require("snacks").picker("git_log_file_diff")
-      end,
-      desc = "MiniDiff: Show file diff vs Git commit",
-    },
-  },
 }

@@ -6,15 +6,18 @@ local sn = { silent = true, noremap = true }
 local keybindings_all_modes = {
   { "<A-h>", "<C-w>h", "Focus window left" },
   { "<A-j>", "<C-w>j", "Focus window below" },
-  { "<A-k>", "<C-w>k", "Focus window above" },
+  { "<M-k>", "<C-w>k", "Focus window above" },
   { "<A-l>", "<C-w>l", "Focus window right" },
-  { "<A-w>", ":q<CR>", "Close window" },
   { "<A-S-l>", ":vsplit<CR>", "Split window right" },
   { "<A-S-j>", ":split<CR>", "Split window below" },
   { "<A-f>", "<leader>wm", "Maximize window toggle" },
   { "<C-h>", ":bprevious<CR>", "Previous Buffer" },
   { "<C-l>", ":bnext<CR>", "Next buffer" },
 }
+map("n", "<A-w>", ":q<CR>", { desc = "Close window", unpack(sn) })
+map("t", "<A-w>", "exit<CR>", { desc = "Close termanal" })
+map("n", "<A-k>", "<C-w>k", { desc = "Focus window above" })
+map("n", "<A-i>", vim.lsp.buf.hover, { desc = "Hover Documentation" })
 
 for _, binding in ipairs(keybindings_all_modes) do
   map(all_modes, binding[1], binding[2], { desc = binding[3], unpack(sn) })
@@ -24,7 +27,8 @@ map("n", "<S-u>", "<C-r>", { desc = "Redo", unpack(sn) })
 
 -- snacks
 Snacks.toggle.zoom():map("<A-f>")
-map("t", "<A-f>", "<C-\\><C-n>", { desc = "Exit terminal to normal mode", unpack(sn) })
+map("t", "<A-f>", "<C-\\><C-n>", { desc = "Exit terminal to normal mode" })
+map("t", "<A-k>", "<C-\\><C-n><C-w>k", { desc = "Exit terminal to normal mode" })
 
 map(all_modes, "<A-t>", function()
   Snacks.terminal()
@@ -32,7 +36,11 @@ end, { desc = "Toggle Terminal" })
 
 map(all_modes, "<C-w>", function()
   Snacks.bufdelete()
-end, { desc = "Delete Buffer" })
+end, { desc = "Delete Buffer", nowait = true })
+
+map("n", "<leader>gf", function()
+  Snacks.picker("git_log_file_diff")
+end, { desc = "Diff file history" })
 
 -- which-key
 local wk = require("which-key")
@@ -95,7 +103,7 @@ map("n", "<c-leftdrag>", mc.handleMouseDrag)
 map("n", "<c-leftrelease>", mc.handleMouseRelease)
 
 -- Disable and enable cursors.
-map({ "n", "x" }, "<Esc>", mc.toggleCursor)
+map({ "n" }, "<Esc>", mc.disableCursors)
 
 -- Mappings defined in a keymap layer only apply when there are
 -- multiple cursors. This lets you have overlapping mappings.
